@@ -4,6 +4,8 @@
 #include <fstream>
 #include <vector>
 #include <exception>
+#include <random>
+#include <ctime>
 using namespace std;
 
 class Matrix
@@ -19,6 +21,7 @@ public:
   static bool MATRIX_VERBOSE;
   static int MATRIX_PRINT_PRECISION;
   static bool MATRIX_EXIT_IF_ERROR;
+  static unsigned MATRIX_PRINT_PRECISION_MAX;
   /* methods */
   Matrix(int nrows, int ncols);
   Matrix();
@@ -69,6 +72,7 @@ public:
 };
 
 int Matrix::MATRIX_PRINT_PRECISION = 4;
+unsigned MATRIX_PRINT_PRECISION_MAX = 15;
 bool Matrix::MATRIX_VERBOSE = false;
 bool Matrix::MATRIX_EXIT_IF_ERROR = true;
 void Matrix::set_dims(int rows, int cols)
@@ -148,15 +152,15 @@ Matrix::~Matrix()
 
 double Matrix::get(int i, int j)
 {
-  i = validate_index(1, i);
-  j = validate_index(2, j);
+  i = this->validate_index(1, i);
+  j = this->validate_index(2, j);
   return this->me[i][j];
 }
 
 void Matrix::set(int i, int j, double value)
 {
-  i = validate_index(1, i);
-  j = validate_index(2, j);
+  i = this->validate_index(1, i);
+  j = this->validate_index(2, j);
   this->me[i][j] = value;
 }
 
@@ -176,7 +180,7 @@ int Matrix::validate_index(int ndim, int index)
       exit(1);
     }
 
-    return ((index + this->nrows) % this->nrows);
+    return ((index + rows()) % rows());
   }
   else
   {
@@ -188,7 +192,7 @@ int Matrix::validate_index(int ndim, int index)
       cout << ":exiting\033[m" << endl;
       exit(1);
     }
-    return ((index + this->ncols) % this->ncols);
+    return ((index + cols()) % cols());
   }
 }
 
@@ -1093,4 +1097,25 @@ void Matrix::from_csv(string filename)
     }
     *this = *ans;
   }
+}
+
+Matrix &random_matrix(int rows_, int cols_, double rangeBegin = 0.0, double rangeEnd = 1.0, unsigned seed = 0)
+{
+  Matrix *ans = new Matrix(rows_, cols_);
+  if (seed == 0)
+  {
+    seed = time(0);
+  }
+
+  std::default_random_engine engine(seed);
+  std::uniform_real_distribution<double> distr(rangeBegin, rangeEnd);
+
+  for (register int i = 0; i < rows_; i++)
+  {
+    for (register int j = 0; j < cols_; j++)
+    {
+      ans->set(i, j, distr(engine));
+    }
+  }
+  return *ans;
 }
