@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <iomanip>
 #include <fstream>
+#include <vector>
+#include <exception>
 using namespace std;
 
 class Matrix
@@ -11,6 +13,7 @@ private:
   int ncols = 0, nrows = 0;
   double **me = nullptr;
   int validate_index(int index, int i);
+  void set_dims(int rows, int cols);
 
 public:
   static bool MATRIX_VERBOSE;
@@ -68,7 +71,11 @@ public:
 int Matrix::MATRIX_PRINT_PRECISION = 4;
 bool Matrix::MATRIX_VERBOSE = false;
 bool Matrix::MATRIX_EXIT_IF_ERROR = true;
-
+void Matrix::set_dims(int rows, int cols)
+{ //private method
+  this->nrows = rows;
+  this->ncols = cols;
+}
 Matrix::Matrix() {}
 Matrix::Matrix(int nrows, int ncols)
 {
@@ -160,7 +167,7 @@ int Matrix::validate_index(int ndim, int index)
 {
   if (ndim == 1)
   {
-    if (index <= -nrows || index >= nrows)
+    if (index <= -rows() || index >= rows())
     {
       cout << "\033[91m:error - Invalid 'row' index access!" << endl;
       cout << ":error - The valid range is [" << 1 - nrows << ", " << nrows - 1
@@ -173,7 +180,7 @@ int Matrix::validate_index(int ndim, int index)
   }
   else
   {
-    if (index <= -this->ncols || index >= this->ncols)
+    if (index <= -cols() || index >= cols())
     {
       cout << "\033[91m:error - Invalid 'col' index access!" << endl;
       cout << ":error - The valid range is [" << 1 - this->ncols << ", " << this->ncols - 1
@@ -950,66 +957,140 @@ void Matrix::to_csv(string filename)
   }
 }
 
-// void Matrix::from_csv(string filename)
-// {
-//   string extension_csv;
-//   if (filename.size() < 5)
-//   {
-//     extension_csv = ".";
-//   }
-//   else
-//   {
-//     extension_csv = filename.substr(filename.size() - 4, 4);
-//   }
-//   if (extension_csv.compare(".csv") != 0)
-//   { //filename does NOT have extension .csv
-//     filename.append(".csv");
-//     if (MATRIX_VERBOSE)
-//     {
-//       cout << "\033[1;93m:warning - Matrix::to_csv(string)" << endl;
-//       cout << "\033[0;93m:warning - Filename does NOT have extension '.csv'." << endl;
-//       cout << ":warning - I am appending this extension into the file name.\033[m" << endl;
-//     }
-//   }
+void Matrix::from_csv(string filename)
+{
+  string extension_csv;
+  if (filename.size() < 5)
+  {
+    extension_csv = ".";
+  }
+  else
+  {
+    extension_csv = filename.substr(filename.size() - 4, 4);
+  }
+  if (extension_csv.compare(".csv") != 0)
+  { //filename does NOT have extension .csv
+    filename.append(".csv");
+    if (MATRIX_VERBOSE)
+    {
+      cout << "\033[1;93m:warning - Matrix::to_csv(string)" << endl;
+      cout << "\033[0;93m:warning - Filename does NOT have extension '.csv'." << endl;
+      cout << ":warning - I am appending this extension into the file name.\033[m" << endl;
+    }
+  }
 
-//   ifstream csv_file;
+  ifstream csv_file;
 
-//   csv_file.open(filename);
-//   if (!csv_file.is_open())
-//   {
+  csv_file.open(filename);
+  if (!csv_file.is_open())
+  {
 
-//     cout << "\033[1;91m:error - Matrix::to_csv(string)" << endl;
-//     cout << "\033[0;91m:error - File '" << filename << "' could not be opened." << endl;
+    cout << "\033[1;91m:error - Matrix::to_csv(string)" << endl;
+    cout << "\033[0;91m:error - File '" << filename << "' could not be opened." << endl;
 
-//     if (MATRIX_EXIT_IF_ERROR)
-//     {
-//       cout << "\033[0;91m:exiting" << endl;
-//       exit(1);
-//     }
-//   }
-//   else
-//   {
+    cout << "\033[0;91m:exiting" << endl;
+    exit(1);
+  }
+  else
+  {
 
-//     string line;
+    string line;
+    vector<double> values_vector;
 
-//     string substring;
-//     size_t found = 0;
-//     double value;
-//     while (getline(csv_file, line))
-//     {
-//       while (found != string::npos && line.size() > 0)
-//       {
-//         found = line.find(",");
-//         if (found != string::npos)
-//         {
-//           substring = line.substr(0, found);
-//           value = stod(substring);
-//           line.erase(0, found + 1);
-//           cout << value << endl;
-//         }
-//       }
-//       value = stod(line);
-//       cout << value << endl;
-//     }
-//   }
-// }
+    bool found;
+    size_t index = 0;
+    double value;
+    while (getline(csv_file, line))
+    {
+      index = line.find("//");
+      if (index != string::npos)
+      {
+        line = line.erase(index, line.size() - 1); //????? -1
+      }
+      found = true;
+      while (found && line.size() > 0)
+      {
+        index = line.find(",");
+        if (index != string::npos)
+        {
+          found = true;
+
+          try
+          {
+            value = stod(line.substr(0, index));
+          }
+          catch (exception &e)
+          {
+            cout << "\033[91;1m:error - Matrix::from_csv(string)" << endl;
+            cout << "\033[0;91m:error - I could not convert some value. Verify the file." << endl;
+            cout << ":error - file name: " << filename << endl;
+            cout << ":error - " << e.what() << endl;
+            cout << ":exiting\033[m" << endl;
+          }
+          values_vector.push_back(value);
+          line.erase(0, index + 1);
+        }
+        else
+        {
+          found = false;
+        }
+      }
+      if (line.size() > 0)
+      {
+        try
+        {
+          value = stod(line);
+          values_vector.push_back(value);
+        }
+        catch (exception &e)
+        {
+          cout << "\033[91;1m:error - Matrix::from_csv(string)" << endl;
+          cout << "\033[0;91m:error - I could not convert some value. Verify the file." << endl;
+          cout << ":error - file name: " << filename << endl;
+          cout << ":error - " << e.what() << endl;
+          cout << ":exiting\033[m" << endl;
+          exit(1);
+        }
+      }
+    }
+    int rows_, cols_;
+    try
+    {
+      rows_ = (int)values_vector[0];
+      cols_ = (int)values_vector[1];
+      values_vector.erase(values_vector.begin());
+      values_vector.erase(values_vector.begin());
+    }
+    catch (exception &e)
+    {
+      cout << "\033[91;1m:error - Matrix::from_csv(string)" << endl;
+      cout << "\033[0;91m:error - I think you passed a blank file. Verify it." << endl;
+      cout << ":error - file name: " << filename << endl;
+      cout << ":error - " << e.what() << endl;
+      cout << ":exiting\033[m" << endl;
+      exit(1);
+    }
+
+    if (rows_ * cols_ != values_vector.size())
+    {
+      cout << "\033[91;1m:error - Matrix::from_csv(string)" << endl;
+      cout << "\033[0;91m:error - Matrix dimensions and its values do not match." << endl;
+      cout << ":error - file name: " << filename << endl;
+      cout << ":exiting\033[m" << endl;
+      exit(1);
+    }
+
+    Matrix *ans = new Matrix(rows_, cols_);
+
+    register int counter = 0;
+    for (register int i = 0; i < rows_; i++)
+    {
+      for (register int j = 0; j < cols_; j++)
+      {
+        ans->set(i, j, (double)values_vector[counter]);
+        counter += 1;
+      }
+    }
+    *this = *ans;
+  }
+}
