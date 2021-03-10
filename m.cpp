@@ -5,7 +5,7 @@ using namespace std;
 int main()
 {
 
-  Matrix::MATRIX_VERBOSE = false;     //shows some useful informations when true
+  Matrix::MATRIX_VERBOSE = true;      //shows some useful informations when true
   Matrix::MATRIX_PRINT_PRECISION = 4; //the precision of numbers when printed
   int i, j;
   Matrix mymatrix(3, 5), secondmatrix(3, 5); //declaring my matrix objects
@@ -53,6 +53,9 @@ int main()
   cout << (mymatrix >= 4);
 
   cout << eye(6, 4);
+  cout << mymatrix;
+  secondmatrix.to_csv("2");
+  mymatrix.to_csv("Nome");
 
   return 0;
 }

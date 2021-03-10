@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <iomanip>
+#include <fstream>
 using namespace std;
 
 class Matrix
@@ -14,6 +15,7 @@ private:
 public:
   static bool MATRIX_VERBOSE;
   static int MATRIX_PRINT_PRECISION;
+  static bool MATRIX_EXIT_IF_ERROR;
   /* methods */
   Matrix(int nrows, int ncols);
   Matrix();
@@ -59,21 +61,43 @@ public:
   friend Matrix &operator>(Matrix &matrix, double value);
   friend Matrix &operator>(Matrix &matrix, Matrix &other); //matrix2matrix
   Matrix &to_zeros(void);                                  //returns a matrix of zeros
+  void to_csv(string filename);
+  void from_csv(string filename);
 };
 
 int Matrix::MATRIX_PRINT_PRECISION = 4;
 bool Matrix::MATRIX_VERBOSE = false;
+bool Matrix::MATRIX_EXIT_IF_ERROR = true;
 
 Matrix::Matrix() {}
 Matrix::Matrix(int nrows, int ncols)
 {
+  if (nrows * ncols > 1250000) // 10MB of memory
+  {
+    char continue_;
+    cout << "\033[1;93m:warning - Matrix::Matrix(int,int)" << endl;
+    cout << "\033[0;93m:warning - Matrix size is huge! More than 10MB.\033[m" << endl;
+    cout << "\033[0;93m:warning - Are you sure about this size? It may cause computer brake or crash.\033[m" << endl;
+    cout << "\033[0;93m:warning - Do you want continue? [y/n]\033[m" << endl;
+    cin >> continue_;
+    if (MATRIX_EXIT_IF_ERROR and ((continue_ != 'y') and (continue_ != 'Y')))
+    {
+      cout << "\033[0;93m:exiting\033[m" << endl;
+      exit(1);
+    }
+  }
 
   register int i;
   this->me = (double **)calloc(nrows, sizeof(double *));
   if (this->me == nullptr)
   {
-    cout << "\033[91mParent pointer could not be allocated!\033[m" << endl;
-    exit(1);
+    cout << "\033[1;91m:error - Matrix::Matrix(int,int)" << endl;
+    cout << "\033[0;91m:error - Parent pointer could not be allocated!\033[m" << endl;
+    throw "Allocation Error ocurred.";
+    if (MATRIX_EXIT_IF_ERROR)
+    {
+      exit(1);
+    }
   }
   for (i = 0; i < nrows; i++)
   {
@@ -95,7 +119,8 @@ Matrix::Matrix(int nrows, int ncols)
   this->ncols = ncols;
   if (Matrix::MATRIX_VERBOSE)
   {
-    cout << "\033[95m:ok - Matrix allocation :: size("
+    cout << "\033[1;95m:ok - Matrix::Matrix(int,int) " << endl;
+    cout << "\033[0;95m:ok - Matrix allocation :: size("
          << nrows << ", " << ncols << ")\033[m" << endl;
   }
 }
@@ -104,7 +129,8 @@ Matrix::~Matrix()
 {
   if (Matrix::MATRIX_VERBOSE)
   {
-    cout << "\033[95m:ok - Matrix destructor called.\033[m" << endl;
+    cout << "\033[1;95m:ok - Matrix::~Matrix()" << endl;
+    cout << "\033[0;95m:ok - Matrix destructor called.\033[m" << endl;
   }
   for (register int i = 0; i < this->nrows; i++)
   {
@@ -185,15 +211,16 @@ std::ostream &operator<<(std::ostream &out, Matrix &matrix)
 
 Matrix &operator+(double value, Matrix &matrix)
 {
+  Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
   register int i, j;
   for (i = 0; i < matrix.rows(); i++)
   {
     for (j = 0; j < matrix.cols(); j++)
     {
-      matrix.set(i, j, matrix.get(i, j) + value);
+      ans->set(i, j, matrix.get(i, j) + value);
     }
   }
-  return matrix;
+  return *ans;
 }
 Matrix &operator+(Matrix &matrix, double value)
 {
@@ -202,68 +229,71 @@ Matrix &operator+(Matrix &matrix, double value)
 
 Matrix &operator-(double value, Matrix &matrix)
 {
+  Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
   register int i, j;
   for (i = 0; i < matrix.rows(); i++)
   {
     for (j = 0; j < matrix.cols(); j++)
     {
-      matrix.set(i, j, value - matrix.get(i, j));
+      ans->set(i, j, value - matrix.get(i, j));
     }
   }
-  return matrix;
+  return *ans;
 }
 Matrix &operator-(Matrix &matrix, double value)
 {
+  Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
   register int i, j;
   for (i = 0; i < matrix.rows(); i++)
   {
     for (j = 0; j < matrix.cols(); j++)
     {
-      matrix.set(i, j, matrix.get(i, j) - value);
+      ans->set(i, j, matrix.get(i, j) - value);
     }
   }
-  return matrix;
+  return *ans;
 }
+//////////////////////////////////////////////////////////////////////q
 
 Matrix &operator/(double value, Matrix &matrix)
 {
-
+  Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
   register int i, j;
   for (i = 0; i < matrix.rows(); i++)
   {
     for (j = 0; j < matrix.cols(); j++)
     {
-      matrix.set(i, j, value / matrix.get(i, j));
+      ans->set(i, j, value / matrix.get(i, j));
     }
   }
-  return matrix;
+  return *ans;
 }
 Matrix &operator/(Matrix &matrix, double value)
 {
-
+  Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
   register int i, j;
   for (i = 0; i < matrix.rows(); i++)
   {
     for (j = 0; j < matrix.cols(); j++)
     {
-      matrix.set(i, j, matrix.get(i, j) / value);
+      ans->set(i, j, matrix.get(i, j) / value);
     }
   }
-  return matrix;
+  return *ans;
 }
 
 Matrix &operator*(double value, Matrix &matrix)
 {
-
+  Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
   register int i, j;
   for (i = 0; i < matrix.rows(); i++)
   {
     for (j = 0; j < matrix.cols(); j++)
     {
-      matrix.set(i, j, matrix.get(i, j) * value);
+      ans->set(i, j, matrix.get(i, j) * value);
     }
   }
-  return matrix;
+  return *ans;
 }
 Matrix &operator*(Matrix &matrix, double value)
 {
@@ -298,7 +328,6 @@ Matrix &operator!=(Matrix &matrix, double value)
 
 Matrix &operator==(double value, Matrix &matrix)
 {
-
   Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
   register int i, j;
   for (i = 0; i < matrix.rows(); i++)
@@ -367,7 +396,6 @@ Matrix &operator<=(Matrix &matrix, double value)
 
 Matrix &operator<(double value, Matrix &matrix)
 {
-
   Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
   register int i, j;
   for (i = 0; i < matrix.rows(); i++)
@@ -388,7 +416,6 @@ Matrix &operator<(double value, Matrix &matrix)
 }
 Matrix &operator<(Matrix &matrix, double value)
 {
-
   Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
   register int i, j;
   for (i = 0; i < matrix.rows(); i++)
@@ -410,7 +437,6 @@ Matrix &operator<(Matrix &matrix, double value)
 
 Matrix &operator>=(double value, Matrix &matrix)
 {
-
   Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
   register int i, j;
   for (i = 0; i < matrix.rows(); i++)
@@ -431,7 +457,6 @@ Matrix &operator>=(double value, Matrix &matrix)
 }
 Matrix &operator>=(Matrix &matrix, double value)
 {
-
   Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
   register int i, j;
   for (i = 0; i < matrix.rows(); i++)
@@ -453,7 +478,6 @@ Matrix &operator>=(Matrix &matrix, double value)
 
 Matrix &operator>(double value, Matrix &matrix)
 {
-
   Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
   register int i, j;
   for (i = 0; i < matrix.rows(); i++)
@@ -474,7 +498,6 @@ Matrix &operator>(double value, Matrix &matrix)
 }
 Matrix &operator>(Matrix &matrix, double value)
 {
-
   Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
   register int i, j;
   for (i = 0; i < matrix.rows(); i++)
@@ -538,7 +561,7 @@ Matrix &operator%(Matrix &matrix, Matrix &other)
 }
 
 Matrix &Matrix::T(void)
-{
+{ // function matrix transposition
   register int i, j;
   Matrix *ans = new Matrix(this->cols(), this->rows());
   for (i = 0; i < this->rows(); i++)
@@ -554,7 +577,6 @@ Matrix &Matrix::T(void)
 
 Matrix &operator+(Matrix &matrix, Matrix &other)
 {
-
   if (matrix.rows() != other.rows() || matrix.cols() != other.cols())
   {
     cout << "\033[91m:error - Matrix sum not allowed!" << endl;
@@ -578,7 +600,6 @@ Matrix &operator+(Matrix &matrix, Matrix &other)
 
 Matrix &operator-(Matrix &matrix, Matrix &other)
 {
-
   if (matrix.rows() != other.rows() || matrix.cols() != other.cols())
   {
     cout << "\033[91m:error - Matrix subtraction not allowed!" << endl;
@@ -602,7 +623,6 @@ Matrix &operator-(Matrix &matrix, Matrix &other)
 
 Matrix &operator*(Matrix &matrix, Matrix &other)
 {
-
   if (matrix.rows() != other.rows() || matrix.cols() != other.cols())
   {
     cout << "\033[91m:error - Matrix multiplication \"entry-entry\" not allowed!" << endl;
@@ -626,7 +646,6 @@ Matrix &operator*(Matrix &matrix, Matrix &other)
 
 Matrix &operator/(Matrix &matrix, Matrix &other)
 {
-
   if (matrix.rows() != other.rows() || matrix.cols() != other.cols())
   {
     cout << "\033[91m:error - Matrix division \"entry-entry\" not allowed!" << endl;
@@ -650,7 +669,6 @@ Matrix &operator/(Matrix &matrix, Matrix &other)
 
 Matrix &operator!=(Matrix &matrix, Matrix &other)
 {
-
   if (matrix.rows() != other.rows() || matrix.cols() != other.cols())
   {
     cout << "\033[91m:error - Matrix comparison \"!=\" not allowed!" << endl;
@@ -683,7 +701,6 @@ Matrix &operator!=(Matrix &matrix, Matrix &other)
 
 Matrix &operator==(Matrix &matrix, Matrix &other)
 {
-
   if (matrix.rows() != other.rows() || matrix.cols() != other.cols())
   {
     cout << "\033[91m:error - Matrix comparison \"!=\" not allowed!" << endl;
@@ -716,7 +733,6 @@ Matrix &operator==(Matrix &matrix, Matrix &other)
 
 Matrix &operator>=(Matrix &matrix, Matrix &other)
 {
-
   if (matrix.rows() != other.rows() || matrix.cols() != other.cols())
   {
     cout << "\033[91m:error - Matrix comparison \"!=\" not allowed!" << endl;
@@ -749,7 +765,6 @@ Matrix &operator>=(Matrix &matrix, Matrix &other)
 
 Matrix &operator<=(Matrix &matrix, Matrix &other)
 {
-
   if (matrix.rows() != other.rows() || matrix.cols() != other.cols())
   {
     cout << "\033[91m:error - Matrix comparison \"!=\" not allowed!" << endl;
@@ -782,7 +797,6 @@ Matrix &operator<=(Matrix &matrix, Matrix &other)
 
 Matrix &operator>(Matrix &matrix, Matrix &other)
 {
-
   if (matrix.rows() != other.rows() || matrix.cols() != other.cols())
   {
     cout << "\033[91m:error - Matrix comparison \"!=\" not allowed!" << endl;
@@ -815,7 +829,6 @@ Matrix &operator>(Matrix &matrix, Matrix &other)
 
 Matrix &operator<(Matrix &matrix, Matrix &other)
 {
-
   if (matrix.rows() != other.rows() || matrix.cols() != other.cols())
   {
     cout << "\033[91m:error - Matrix comparison \"!=\" not allowed!" << endl;
@@ -854,7 +867,6 @@ Matrix &Matrix::to_zeros()
 
 Matrix &eye(int rows, int cols, int offset = 0)
 {
-
   if (rows <= 0 || cols <= 0)
   {
     cout << "\033[91m:error - Matrix dimension not allowed!" << endl;
@@ -883,3 +895,121 @@ Matrix &eye(int n)
 {
   return eye(n, n);
 }
+
+void Matrix::to_csv(string filename)
+{
+
+  string extension_csv;
+  if (filename.size() < 5)
+  {
+    extension_csv = ".";
+  }
+  else
+  {
+    extension_csv = filename.substr(filename.size() - 4, 4);
+  }
+  if (extension_csv.compare(".csv") != 0)
+  { //filename does NOT have extension .csv
+    filename.append(".csv");
+    if (MATRIX_VERBOSE)
+    {
+      cout << "\033[1;93m:warning - Matrix::to_csv(string)" << endl;
+      cout << "\033[0;93m:warning - Filename does NOT have extension '.csv'." << endl;
+      cout << ":warning - I am appending this extension into the file name.\033[m" << endl;
+    }
+  }
+
+  ofstream csv_file;
+  csv_file.open(filename);
+  if (!csv_file.is_open())
+  {
+    throw "Error: File could not be opened.";
+    if (MATRIX_VERBOSE)
+    {
+      cout << "\033[1;91m:error - Matrix::to_csv(string)" << endl;
+      cout << "\033[0;91m:error - File '" << filename << "' could not be opened." << endl;
+      if (MATRIX_EXIT_IF_ERROR)
+      {
+        cout << "\033[0;91m:exiting" << endl;
+        exit(1);
+      }
+    }
+  }
+  else
+  { // writing the csv file
+    csv_file << rows() << "," << cols() << " //matrix dimensions" << endl;
+    for (register int i = 0; i < rows(); i++)
+    {
+      for (register int j = 0; j < cols() - 1; j++)
+      {
+        csv_file << setprecision(15) << this->get(i, j) << ",";
+      }
+      csv_file << setprecision(15) << this->get(i, cols() - 1) << endl;
+    }
+    csv_file.close();
+  }
+}
+
+// void Matrix::from_csv(string filename)
+// {
+//   string extension_csv;
+//   if (filename.size() < 5)
+//   {
+//     extension_csv = ".";
+//   }
+//   else
+//   {
+//     extension_csv = filename.substr(filename.size() - 4, 4);
+//   }
+//   if (extension_csv.compare(".csv") != 0)
+//   { //filename does NOT have extension .csv
+//     filename.append(".csv");
+//     if (MATRIX_VERBOSE)
+//     {
+//       cout << "\033[1;93m:warning - Matrix::to_csv(string)" << endl;
+//       cout << "\033[0;93m:warning - Filename does NOT have extension '.csv'." << endl;
+//       cout << ":warning - I am appending this extension into the file name.\033[m" << endl;
+//     }
+//   }
+
+//   ifstream csv_file;
+
+//   csv_file.open(filename);
+//   if (!csv_file.is_open())
+//   {
+
+//     cout << "\033[1;91m:error - Matrix::to_csv(string)" << endl;
+//     cout << "\033[0;91m:error - File '" << filename << "' could not be opened." << endl;
+
+//     if (MATRIX_EXIT_IF_ERROR)
+//     {
+//       cout << "\033[0;91m:exiting" << endl;
+//       exit(1);
+//     }
+//   }
+//   else
+//   {
+
+//     string line;
+
+//     string substring;
+//     size_t found = 0;
+//     double value;
+//     while (getline(csv_file, line))
+//     {
+//       while (found != string::npos && line.size() > 0)
+//       {
+//         found = line.find(",");
+//         if (found != string::npos)
+//         {
+//           substring = line.substr(0, found);
+//           value = stod(substring);
+//           line.erase(0, found + 1);
+//           cout << value << endl;
+//         }
+//       }
+//       value = stod(line);
+//       cout << value << endl;
+//     }
+//   }
+// }
