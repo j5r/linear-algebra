@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <stdlib.h>
 #include <iomanip>
@@ -46,7 +47,11 @@ public:
   friend Matrix &operator/(Matrix &matrix, double value);
   friend Matrix &operator/(Matrix &matrix, Matrix &other); //matrix2matrix
   friend Matrix &operator%(Matrix &matrix, Matrix &other);
+  friend Matrix &operator<<(Matrix &matrix, Matrix &other); // copy a matrix
+  void copy(Matrix &matrix);                                // copy a matrix
   Matrix &T(void);
+  friend Matrix &operator^(Matrix &matrix, int i);
+
   // ---------------- boolean operators
   friend Matrix &operator!=(double value, Matrix &matrix);
   friend Matrix &operator!=(Matrix &matrix, double value);
@@ -211,7 +216,7 @@ std::ostream &operator<<(std::ostream &out, Matrix &matrix)
     out << "  ";
     for (register int j = 0; j < matrix.cols(); j++)
     {
-      out << setw(Matrix::MATRIX_PRINT_PRECISION + 5) << setprecision(Matrix::MATRIX_PRINT_PRECISION) << matrix.get(i, j) << " ";
+      out << setw(Matrix::MATRIX_PRINT_PRECISION + 7) << setprecision(Matrix::MATRIX_PRINT_PRECISION) << matrix.get(i, j) << " ";
     }
     out << endl;
   }
@@ -544,6 +549,15 @@ Matrix &operator-(Matrix &matrix)
 
 Matrix &operator%(Matrix &matrix, Matrix &other)
 {
+  if (matrix.rows() == 1 && matrix.cols() == 1)
+  {
+    return (matrix.get(0, 0) * other);
+  }
+  else if (other.rows() == 1 && other.cols() == 1)
+  {
+    return (other.get(0, 0) * matrix);
+  }
+
   if (matrix.cols() != other.rows())
   {
     cout << "\033[91m:error - Matrix multiplication not allowed!" << endl;
@@ -1116,6 +1130,186 @@ Matrix &random_matrix(int rows_, int cols_, double rangeBegin = 0.0, double rang
     {
       ans->set(i, j, distr(engine));
     }
+  }
+  return *ans;
+}
+
+Matrix &diag(Matrix &m)
+{
+  if (m.rows() == 1 || m.cols() == 1)
+  {
+    if (m.rows() == 1)
+    {
+      Matrix *ans = new Matrix(m.cols(), m.cols());
+      for (register int i = 0; i < m.cols(); i++)
+      {
+        ans->set(i, i, m.get(i, 0));
+      }
+      return *ans;
+    }
+    else
+    {
+      Matrix *ans = new Matrix(m.rows(), m.rows());
+      for (register int i = 0; i < m.rows(); i++)
+      {
+        ans->set(i, i, m.get(i, 0));
+      }
+      return *ans;
+    }
+  }
+  else if (m.rows() == 0 || m.cols() == 0)
+  {
+    cout << "\033[1;91m:error - diag(Matrix)" << endl;
+    cout << "\033[0;91m:error - Empty matrix." << endl;
+    cout << ":exiting\033[m" << endl;
+    exit(1);
+  }
+  else
+  {
+    int n = min(m.rows(), m.cols());
+    Matrix *ans = new Matrix(n, 1);
+    for (register int i = 0; i < n; i++)
+    {
+      ans->set(i, 0, m.get(i, i));
+    }
+    return *ans;
+  }
+}
+// Matrix &prod(Matrix &m, int axis = -1)
+// {
+//   int rowmax, colmax;
+//   Matrix *ans;
+//   if (axis == -1)
+//   {
+//     ans = new Matrix(1, 1);
+//     rowmax = 1;
+//     colmax = 1;
+//   }
+//   else if (axis == 0)
+//   {
+//     rowmax = 1;
+//     colmax = m.cols();
+//     ans = new Matrix(rowmax, colmax);
+//   }
+//   else if (axis == 1)
+//   {
+//     rowmax = m.rows();
+//     colmax = 1;
+//     ans = new Matrix(rowmax, colmax);
+//   }
+//   else
+//   {
+//     cout << ":error - prod(Matrix,int)" << endl;
+//     cout << ":error - Axis value invalid. Choose '0' or '1', or '-1' (standard) for scalar matrix" << endl;
+//     cout << ":exiting" << endl;
+//     exit(1);
+//   }
+//   (*ans) = (*ans) + 1;
+//   cout << *ans;
+//   for (register int i = 0; i < rowmax; i++)
+//   {
+//     for (register int j = 0; j < colmax; j++)
+//     {
+//       ans->set(i, j, ans->get(i, j) * m.get(i, j));
+//     }
+//   }
+//   return *ans;
+// }
+
+// Matrix &sum(Matrix &m, int axis = -1)
+// {
+//   int rowmax, colmax;
+//   Matrix *ans;
+//   if (axis == -1)
+//   {
+//     ans = new Matrix(1, 1);
+//     rowmax = 1;
+//     colmax = 1;
+//   }
+//   else if (axis == 0)
+//   {
+//     rowmax = 1;
+//     colmax = m.cols();
+//     ans = new Matrix(rowmax, colmax);
+//   }
+//   else if (axis == 1)
+//   {
+//     rowmax = m.rows();
+//     colmax = 1;
+//     ans = new Matrix(rowmax, colmax);
+//   }
+//   else
+//   {
+//     cout << ":error - prod(Matrix,int)" << endl;
+//     cout << ":error - Axis value invalid. Choose '0' or '1', or '-1' (standard) for scalar matrix" << endl;
+//     cout << ":exiting" << endl;
+//     exit(1);
+//   }
+
+//   for (register int i = 0; i < rowmax; i++)
+//   {
+//     for (register int j = 0; j < colmax; j++)
+//     {
+//       ans->set(i, j, ans->get(i, j) + m.get(i, j));
+//     }
+//   }
+//   return *ans;
+// }
+
+void Matrix::copy(Matrix &matrix)
+{
+  if (MATRIX_VERBOSE)
+  {
+    cout << "\033[1;93m:warning - Matrix::copy(Matrix)" << endl;
+    cout << "\033[0;93m:warning - I am destroying the original matrix and copying"
+         << " the other one." << endl;
+  }
+  this->~Matrix();
+  Matrix *ans = new Matrix(matrix.rows(), matrix.cols());
+  *this = *ans;
+
+  for (register int i = 0; i < this->rows(); i++)
+  {
+    for (register int j = 0; j < this->cols(); j++)
+    {
+      this->set(i, j, matrix.get(i, j));
+    }
+  }
+}
+
+Matrix &operator<<(Matrix &matrix, Matrix &other)
+{
+  matrix.copy(other);
+  return matrix;
+}
+Matrix &operator^(Matrix &matrix, int power)
+{
+  if (power <= 0)
+  {
+    cout << "\033[1;91m:error - operator^(Matrix,int)" << endl;
+    cout << "\033[0;91m:error - 'int' operand must be greater than 0." << endl;
+    cout << ":exiting\033[m" << endl;
+    exit(1);
+  }
+  if (matrix.rows() <= 0 || matrix.cols() <= 0)
+  {
+    cout << "\033[1;91m:error - operator^(Matrix,int)" << endl;
+    cout << "\033[0;91m:error - Empty matrix." << endl;
+    cout << ":exiting\033[m" << endl;
+    exit(1);
+  }
+  if (matrix.rows() != matrix.cols())
+  {
+    cout << "\033[1;91m:error - operator^(Matrix,int)" << endl;
+    cout << "\033[0;91m:error - Matrix must be square. The dimensions are (" << matrix.rows() << ", " << matrix.cols() << ")." << endl;
+    cout << ":exiting\033[m" << endl;
+    exit(1);
+  }
+  Matrix *ans = new Matrix();
+  ans->copy(matrix);
+  for (register int i = 0; i < power - 1; i++)
+  {
+    (*ans) = matrix % (*ans);
   }
   return *ans;
 }
