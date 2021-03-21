@@ -30,8 +30,18 @@ public:
   double get(int i, int j);
   int rows();
   int cols();
+  Matrix &norm(int p);
+  Matrix &sum_rows(void);
+  Matrix &sum_cols(void);
+  Matrix &sum(void);
+  Matrix &prod_rows(void);
+  Matrix &prod_cols(void);
+  Matrix &prod(void);
+  Matrix &trace();
   void set(int i, int j, double value);
   friend std::ostream &operator<<(std::ostream &out, const Matrix &matrix);
+
+  bool is_empty(void);
   // ---------------- aritmetic operators
   friend Matrix &operator-(Matrix &matrix);
   friend Matrix &operator+(double value, Matrix &matrix);
@@ -1312,4 +1322,104 @@ Matrix &operator^(Matrix &matrix, int power)
     (*ans) = matrix % (*ans);
   }
   return *ans;
+}
+
+Matrix &Matrix::norm(int p = 2)
+{
+  double norm_p = (double)p;
+  Matrix *ans = new Matrix(1, 1);
+  for (register int i = 0; i < this->rows(); i++)
+  {
+    for (register int j = 0; j < this->cols(); j++)
+    {
+      ans->set(0, 0, ans->get(0, 0) + pow(this->get(i, j), norm_p));
+    }
+  }
+  ans->set(0, 0, pow(ans->get(0, 0), 1 / norm_p));
+  return *ans;
+}
+
+Matrix &Matrix::trace()
+{
+  int m = min(this->cols(), this->rows());
+  Matrix *my_sum = new Matrix(1, 1);
+  for (register int i = 0; i < m; i++)
+  {
+    my_sum->set(0, 0, my_sum->get(0, 0) + this->get(i, i));
+  }
+  return *my_sum;
+}
+
+bool Matrix::is_empty(void)
+{
+  if (this->rows() <= 0 && this->cols() <= 0)
+    return true;
+  return false;
+}
+
+Matrix &Matrix::sum_rows(void)
+{
+
+  Matrix *ans = new Matrix(1, this->cols());
+  for (register int i = 0; i < this->rows(); i++)
+  {
+    for (register int j = 0; j < this->cols(); j++)
+    {
+      ans->set(0, j, ans->get(0, j) + this->get(i, j));
+    }
+  }
+  return *ans;
+}
+
+Matrix &Matrix::sum_cols(void)
+{
+
+  Matrix *ans = new Matrix(this->rows(), 1);
+  for (register int i = 0; i < this->rows(); i++)
+  {
+    for (register int j = 0; j < this->cols(); j++)
+    {
+      ans->set(i, 0, ans->get(i, 0) + this->get(i, j));
+    }
+  }
+  return *ans;
+}
+
+Matrix &Matrix::sum(void)
+{
+  return (this->sum_cols()).sum_rows();
+}
+
+Matrix &Matrix::prod_rows(void)
+{
+
+  Matrix *ans = new Matrix(1, this->cols());
+  *ans = *ans + 1;
+  for (register int i = 0; i < this->rows(); i++)
+  {
+    for (register int j = 0; j < this->cols(); j++)
+    {
+      ans->set(0, j, ans->get(0, j) * this->get(i, j));
+    }
+  }
+  return *ans;
+}
+Matrix &Matrix::prod_cols(void)
+{
+
+  Matrix *ans = new Matrix(this->rows(), 1);
+  *ans = *ans + 1;
+  for (register int i = 0; i < this->rows(); i++)
+  {
+    for (register int j = 0; j < this->cols(); j++)
+    {
+      ans->set(i, 0, ans->get(i, 0) * this->get(i, j));
+    }
+  }
+  return *ans;
+}
+
+Matrix &Matrix::prod(void)
+{
+  return (this->prod_cols()).prod_rows();
 }
