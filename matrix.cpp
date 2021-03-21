@@ -163,6 +163,7 @@ Matrix::~Matrix()
     free(this->me[i]);
   }
   free(this->me);
+  this->set_dims(0, 0);
 }
 
 double Matrix::get(int i, int j)
